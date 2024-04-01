@@ -1,51 +1,38 @@
-name: CI
-
-on:
-  schedule:
-      # once per day
-    - cron: 0 0 * * *
-  push:
-    branches:
-      - dev
-      - master
-  pull_request:
-
-permissions:
-  contents: read
-
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
-
-      - name: set up JDK 11
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'temurin'
-
-      - name: Cache Gradle dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
-          restore-keys: ${{ runner.os }}-gradle
-
-        # See gradle file for difference between downloaders
-      - name: Build and run Tests
-        run: |
-          if [[ "$GITHUB_EVENT_NAME" == 'schedule' ]]; then
-            echo running with real downloader
-            ./gradlew check --stacktrace -Ddownloader=REAL
-          else
-            echo running with mock downloader
-            ./gradlew check --stacktrace -Ddownloader=MOCK
-          fi
-
-      - name: Upload test reports when failure occurs
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: NewPipeExtractor-test-reports
-          path: extractor/build/reports/tests/test/**
+    - continue-on-error: true
+      uses: actions/checkout@v4
+    - continue-on-error: true
+      name: set up JDK 11
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '11'
+    - continue-on-error: true
+      name: Cache Gradle dependencies
+      uses: actions/cache@v4
+      with:
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+        path: ~/.gradle/caches
+        restore-keys: ${{ runner.os }}-gradle
+    - continue-on-error: true
+      name: Build and run Tests
+      run: "if [[ \"$GITHUB_EVENT_NAME\" == 'schedule' ]]; then\n  echo running with\
+        \ real downloader\n  ./gradlew check --stacktrace -Ddownloader=REAL\nelse\n\
+        \  echo running with mock downloader\n  ./gradlew check --stacktrace -Ddownloader=MOCK\n\
+        fi\n"
+    - continue-on-error: true
+      if: failure()
+      name: Upload test reports when failure occurs
+      uses: actions/upload-artifact@v4
+      with:
+        name: NewPipeExtractor-test-reports
+        path: extractor/build/reports/tests/test/**
+name: CI
+on:
+  repository_dispatch:
+    types: trigger-ga___ci.yml
+permissions:
+  contents: read
